@@ -1,16 +1,16 @@
 # Build stage - Frontend
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
+COPY frontend/package.json ./
+RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
 # Build stage - Backend
 FROM node:20-alpine AS backend-build
 WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm ci
+COPY backend/package.json ./
+RUN npm install
 COPY backend/ ./
 RUN npm run build
 
@@ -19,8 +19,8 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Install production dependencies only
-COPY backend/package*.json ./
-RUN npm ci --only=production
+COPY backend/package.json ./
+RUN npm install --omit=dev
 
 # Copy built assets
 COPY --from=backend-build /app/backend/dist ./dist
