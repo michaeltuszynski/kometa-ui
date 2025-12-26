@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLogStream } from '@/hooks/useWebSocket';
 import { api, LogFile } from '@/lib/api';
 import { cn } from '@/lib/utils';
