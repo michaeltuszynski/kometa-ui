@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Square, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Play, Square, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,11 +123,43 @@ export function Dashboard() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Status Card */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Job Status Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Container Status</CardTitle>
+            <CardTitle className="text-sm font-medium">Job Status</CardTitle>
+            {status?.isJobActive ? (
+              <Badge variant="success" className="animate-pulse">Active</Badge>
+            ) : (
+              <Badge variant="secondary">Idle</Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold flex items-center gap-2">
+              {status?.isJobActive ? (
+                <>
+                  <Activity className="h-6 w-6 text-green-500 animate-pulse" />
+                  Running
+                </>
+              ) : (
+                <>
+                  <Activity className="h-6 w-6 text-muted-foreground" />
+                  Idle
+                </>
+              )}
+            </div>
+            {status?.lastLogTime && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Last activity: {status.lastLogTime}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Container Status Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Container</CardTitle>
             {getStatusBadge()}
           </CardHeader>
           <CardContent>

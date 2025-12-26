@@ -1,15 +1,72 @@
 import Docker from 'dockerode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const CONTAINER_NAME = process.env.KOMETA_CONTAINER_NAME || 'kometa';
+const CONFIG_PATH = process.env.KOMETA_CONFIG_PATH || '/kometa-config';
+const LOG_FILE = path.join(CONFIG_PATH, 'logs', 'meta.log');
 
 export interface KometaStatus {
   containerState: 'running' | 'exited' | 'paused' | 'restarting' | 'unknown';
   isJobActive: boolean;
+  jobStatus: 'idle' | 'running' | 'unknown';
+  lastLogTime: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   exitCode: number | null;
   scheduledTime: string;
   error: string | null;
+}
+
+// Check if a job is actively running by examining recent log activity
+function checkJobActivity(): { isActive: boolean; lastLogTime: string | null } {
+  try {
+    if (!fs.existsSync(LOG_FILE)) {
+      return { isActive: false, lastLogTime: null };
+    }
+
+    const stats = fs.statSync(LOG_FILE);
+    const lastModified = stats.mtime;
+    const now = new Date();
+    const diffSeconds = (now.getTime() - lastModified.getTime()) / 1000;
+
+    // If log file was modified in the last 60 seconds, job is likely active
+    if (diffSeconds < 60) {
+      // Double-check by reading last few lines for recent timestamps
+      const fileContent = fs.readFileSync(LOG_FILE, 'utf-8');
+      const lines = fileContent.split('\n').filter(l => l.trim()).slice(-10);
+
+      for (const line of lines.reverse()) {
+        // Parse timestamp from log line: [2025-12-26 10:38:00,821]
+        const match = line.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+        if (match) {
+          const logTime = new Date(match[1].replace(' ', 'T'));
+          const logDiffSeconds = (now.getTime() - logTime.getTime()) / 1000;
+
+          // If we have a log entry within last 60 seconds, job is running
+          if (logDiffSeconds < 60) {
+            return { isActive: true, lastLogTime: match[1] };
+          }
+          return { isActive: false, lastLogTime: match[1] };
+        }
+      }
+    }
+
+    // Check for the last timestamp in the log
+    const fileContent = fs.readFileSync(LOG_FILE, 'utf-8');
+    const lines = fileContent.split('\n').filter(l => l.trim()).slice(-20);
+    for (const line of lines.reverse()) {
+      const match = line.match(/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+      if (match) {
+        return { isActive: false, lastLogTime: match[1] };
+      }
+    }
+
+    return { isActive: false, lastLogTime: null };
+  } catch (error) {
+    console.error('Error checking job activity:', error);
+    return { isActive: false, lastLogTime: null };
+  }
 }
 
 export class DockerService {
@@ -37,9 +94,14 @@ export class DockerService {
       const timeEnv = envVars.find(e => e.startsWith('KOMETA_TIME='));
       const scheduledTime = timeEnv ? timeEnv.split('=')[1] : '03:00';
 
+      // Check actual job activity from logs
+      const jobActivity = checkJobActivity();
+
       return {
         containerState,
-        isJobActive: state.Running,
+        isJobActive: jobActivity.isActive,
+        jobStatus: jobActivity.isActive ? 'running' : 'idle',
+        lastLogTime: jobActivity.lastLogTime,
         startedAt: state.StartedAt || null,
         finishedAt: state.FinishedAt || null,
         exitCode: state.ExitCode ?? null,
@@ -50,6 +112,8 @@ export class DockerService {
       return {
         containerState: 'unknown',
         isJobActive: false,
+        jobStatus: 'unknown',
+        lastLogTime: null,
         startedAt: null,
         finishedAt: null,
         exitCode: null,

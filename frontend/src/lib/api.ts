@@ -20,6 +20,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export interface KometaStatus {
   containerState: 'running' | 'exited' | 'paused' | 'restarting' | 'unknown';
   isJobActive: boolean;
+  jobStatus: 'idle' | 'running' | 'unknown';
+  lastLogTime: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   exitCode: number | null;
