@@ -3,6 +3,10 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import { configRouter } from './routes/config.js';
 import { dockerRouter } from './routes/docker.js';
@@ -41,9 +45,9 @@ app.get('/api/health', (_req, res) => {
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(import.meta.dirname, '../public')));
+  app.use(express.static(path.join(__dirname, '../public')));
   app.get('*', (_req, res) => {
-    res.sendFile(path.join(import.meta.dirname, '../public/index.html'));
+    res.sendFile(path.join(__dirname, '../public/index.html'));
   });
 }
 
