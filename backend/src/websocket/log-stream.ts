@@ -11,11 +11,27 @@ export function setupLogStreaming(io: Server, kometaConfigPath: string): void {
   const subscribedSockets = new Set<string>();
 
   // Watch the log file for changes
-  const watcher = chokidar.watch(logPath, {
-    persistent: true,
-    usePolling: true, // Better for network/docker mounted files
-    interval: 1000,
-  });
+  let watcher: chokidar.FSWatcher | null = null;
+
+  try {
+    watcher = chokidar.watch(logPath, {
+      persistent: true,
+      usePolling: true, // Better for network/docker mounted files
+      interval: 1000,
+      ignoreInitial: true,
+    });
+
+    watcher.on('error', (error) => {
+      console.error('Log watcher error:', error.message);
+    });
+  } catch (error) {
+    console.error('Failed to initialize log watcher:', error);
+  }
+
+  if (!watcher) {
+    console.warn('Log file watcher not available - real-time streaming disabled');
+    return;
+  }
 
   watcher.on('change', async () => {
     if (subscribedSockets.size === 0) return;

@@ -26,15 +26,6 @@ RUN npm install --omit=dev
 COPY --from=backend-build /app/backend/dist ./dist
 COPY --from=frontend-build /app/frontend/dist ./public
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 -G nodejs
-
-# Set ownership
-RUN chown -R nodejs:nodejs /app
-
-USER nodejs
-
 EXPOSE 3000
 
 ENV NODE_ENV=production
